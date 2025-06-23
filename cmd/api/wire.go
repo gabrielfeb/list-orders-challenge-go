@@ -1,4 +1,7 @@
 //go:build wireinject
+// +build wireinject
+
+//go:generate wire
 
 package main
 
@@ -12,15 +15,12 @@ import (
 	"github.com/google/wire"
 )
 
-func NewCreateOrderUseCase(db *sql.DB) *usecase.CreateOrderUseCase {
-	repo := database.NewOrderRepository(db)
-	return usecase.NewCreateOrderUseCase(repo)
-}
 func InitializeOrderHandler(db *sql.DB) *handler.OrderHandler {
 	wire.Build(
 		database.NewOrderRepository,
 		wire.Bind(new(repository.OrderRepository), new(*database.OrderRepository)),
 		usecase.NewCreateOrderUseCase,
+		usecase.NewListOrdersUseCase,
 		handler.NewOrderHandler,
 	)
 	return &handler.OrderHandler{}

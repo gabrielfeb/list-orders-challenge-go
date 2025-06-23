@@ -22,10 +22,14 @@ func main() {
 		log.Fatalf("Error connecting to db: %v", err)
 	}
 	defer db.Close()
+
 	orderHandler := InitializeOrderHandler(db)
+
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Post("/orders", orderHandler.CreateOrder)
+	router.Get("/orders", orderHandler.GetOrders)
+
 	fmt.Printf("Server is running on port %s\n", cfg.WebServerPort)
 	http.ListenAndServe(":"+cfg.WebServerPort, router)
 }
