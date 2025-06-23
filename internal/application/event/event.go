@@ -1,12 +1,12 @@
 package event
 
-// EventInterface defines the contract for any event
+// EventInterface define o contrato para qualquer evento que ocorre na aplicação.
 type EventInterface interface {
 	GetName() string
 	GetPayload() interface{}
 }
 
-// EventHandlerInterface defines the contract for any component that handles an event
+// EventHandlerInterface define o contrato para qualquer componente que lida com um evento.
 type EventHandlerInterface interface {
 	Handle(event EventInterface, ch chan<- error)
 }

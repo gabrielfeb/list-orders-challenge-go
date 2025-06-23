@@ -1,8 +1,7 @@
-version: "3.9"
-
 services:
   app:
     build: .
+    container_name: list-orders-app
     ports:
       - "8080:8080"
     volumes:
@@ -11,11 +10,13 @@ services:
       - db
       - rabbitmq
     environment:
+      # Viper pode sobrescrever o YML com estas variáveis de ambiente.
       - VIPER_DB_URL=postgres://user:password@db:5432/ordersdb?sslmode=disable
       - VIPER_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
   db:
     image: postgres:13
+    container_name: list-orders-db
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -25,6 +26,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
+    container_name: list-orders-rabbitmq
     ports:
       - "5672:5672"
-      - "15672:15672"
+      - "15672:15672" # Porta para a UI de Gerenciamento

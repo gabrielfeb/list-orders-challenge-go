@@ -6,13 +6,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gabrielfeb/list-orders-challenge-go/configs"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
 	"github.com/streadway/amqp"
-
-	// Importa o pacote de configuração do próprio projeto
-	"github.com/gabrielfeb/list-orders-challenge-go/configs"
 )
 
 // main é a função de entrada da aplicação.

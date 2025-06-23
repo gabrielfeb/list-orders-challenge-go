@@ -1,38 +1,34 @@
 package event
 
-// EventDispatcherInterface defines the contract for an event dispatcher
-type EventDispatcherInterface interface {
-	Register(eventName string, handler EventHandlerInterface) error
-	Dispatch(event EventInterface) error
-	Remove(eventName string, handler EventHandlerInterface) error
-	Has(eventName string, handler EventHandlerInterface) bool
-	Clear()
-}
-
 import (
 	"encoding/json"
 	"errors"
-	"github.com/streadway/amqp"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/event"
+	"[github.com/gabrielfeb/list-orders-challenge-go/internal/application/event](https://github.com/gabrielfeb/list-orders-challenge-go/internal/application/event)"
+	"[github.com/streadway/amqp](https://github.com/streadway/amqp)"
 )
 
+// ErrHandlerAlreadyRegistered é retornado quando um handler já foi registrado para um evento.
 var ErrHandlerAlreadyRegistered = errors.New("handler already registered")
 
+// EventDispatcher é a implementação concreta de um despachante de eventos usando RabbitMQ.
 type EventDispatcher struct {
 	Handlers map[string][]event.EventHandlerInterface
 }
 
+// NewEventDispatcher é o construtor para o EventDispatcher.
 func NewEventDispatcher() *EventDispatcher {
 	return &EventDispatcher{
 		Handlers: make(map[string][]event.EventHandlerInterface),
 	}
 }
 
+// Dispatch publica um evento em uma exchange do RabbitMQ.
+// A implementação atual está simplificada para demonstração.
 func (d *EventDispatcher) Dispatch(event event.EventInterface) error {
-	if handlers, ok := d.Handlers[event.GetName()]; ok {
-		// Publicar no RabbitMQ aqui
-		conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/") // Idealmente, a URL vem da config
+	if _, ok := d.Handlers[event.GetName()]; ok {
+		// A conexão com RabbitMQ deve ser gerenciada de forma mais robusta em produção (ex: pool de conexões).
+		conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 		if err != nil {
 			return err
 		}
@@ -49,11 +45,13 @@ func (d *EventDispatcher) Dispatch(event event.EventInterface) error {
 			return err
 		}
 
+		// Declara a exchange do tipo 'fanout', que envia para todas as filas ligadas a ela.
 		err = ch.ExchangeDeclare(event.GetName(), "fanout", true, false, false, false, nil)
 		if err != nil {
 			return err
 		}
 
+		// Publica a mensagem na exchange.
 		err = ch.Publish(event.GetName(), "", false, false, amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,
@@ -61,18 +59,11 @@ func (d *EventDispatcher) Dispatch(event event.EventInterface) error {
 		if err != nil {
 			return err
 		}
-
-		// A lógica de executar handlers pode ser adaptada para consumers
-		go func() {
-			errorChannel := make(chan error)
-			for _, handler := range handlers {
-				handler.Handle(event, errorChannel)
-			}
-		}()
 	}
 	return nil
 }
 
+// Register registra um handler para um nome de evento.
 func (d *EventDispatcher) Register(eventName string, handler event.EventHandlerInterface) error {
 	if _, ok := d.Handlers[eventName]; ok {
 		for _, h := range d.Handlers[eventName] {
@@ -85,13 +76,13 @@ func (d *EventDispatcher) Register(eventName string, handler event.EventHandlerI
 	return nil
 }
 
+// As funções abaixo são parte do contrato, mas não são implementadas neste exemplo.
+
 func (d *EventDispatcher) Remove(eventName string, handler event.EventHandlerInterface) error {
-	// Implementação de remoção
-	return nil
+	return nil // Implementação futura
 }
 func (d *EventDispatcher) Has(eventName string, handler event.EventHandlerInterface) bool {
-	// Implementação de verificação
-	return false
+	return false // Implementação futura
 }
 func (d *EventDispatcher) Clear() {
 	d.Handlers = make(map[string][]event.EventHandlerInterface)

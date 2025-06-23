@@ -1,7 +1,7 @@
 package configs
 
 import (
-	"github.com/spf13/viper"
+	"[github.com/spf13/viper](https://github.com/spf13/viper)"
 )
 
 // Config define todas as configurações necessárias para a aplicação.

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/dto"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/usecase"
-	"github.com/google/uuid"
+	"[github.com/gabrielfeb/list-orders-challenge-go/internal/application/dto](https://github.com/gabrielfeb/list-orders-challenge-go/internal/application/dto)"
+	"[github.com/gabrielfeb/list-orders-challenge-go/internal/application/usecase](https://github.com/gabrielfeb/list-orders-challenge-go/internal/application/usecase)"
+	"[github.com/google/uuid](https://github.com/google/uuid)"
 )
 
 // WebOrderHandler é responsável por receber as requisições HTTP para ordens,

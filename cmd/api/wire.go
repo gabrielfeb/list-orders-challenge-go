@@ -6,9 +6,6 @@ package main
 import (
 	"database/sql"
 
-	"github.com/google/wire"
-	"github.com/streadway/amqp"
-
 	"github.com/gabrielfeb/list-orders-challenge-go/configs"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/event"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/repository"
@@ -16,7 +13,12 @@ import (
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/database"
 	infra_event "github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/event"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/web/handler"
+	"github.com/streadway/amqp"
+	"github.comcom/google/wire"
 )
+
+// Este arquivo define as injeções de dependência para o Google Wire.
+// O Wire irá ler este arquivo e gerar o código de inicialização em 'wire_gen.go'.
 
 var setRepositoryDependency = wire.NewSet(
 	database.NewOrderRepository,
@@ -40,6 +42,12 @@ func NewWebOrderHandler(createUsecase *usecase.CreateOrderUseCase, listUsecase *
 	return handler.NewWebOrderHandler(createUsecase, listUsecase)
 }
 
+// AllServices é uma struct para agrupar todos os serviços inicializados.
+type AllServices struct {
+	WebServerHandler *handler.WebOrderHandler
+}
+
+// InitializeAllServices é o injetor principal que o Wire usará para construir o grafo de dependências.
 func InitializeAllServices(cfg *configs.Config, db *sql.DB, rabbitMQConn *amqp.Connection) (*AllServices, error) {
 	wire.Build(
 		setEventDispatcherDependency,
@@ -51,8 +59,4 @@ func InitializeAllServices(cfg *configs.Config, db *sql.DB, rabbitMQConn *amqp.C
 		wire.Struct(new(AllServices), "*"),
 	)
 	return &AllServices{}, nil
-}
-
-type AllServices struct {
-	WebServerHandler *handler.WebOrderHandler
 }
