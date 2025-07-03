@@ -1,0 +1,26 @@
+# Define o tipo de dado de uma Ordem que a API irá retornar.
+# Usamos camelCase por convenção em GraphQL.
+type Order {
+  id: ID!
+  preco: Float!
+  imposto: Float!
+  precoFinal: Float!
+}
+
+# Define os dados de entrada para criar uma nova ordem.
+input CreateOrderInput {
+  preco: Float!
+  imposto: Float!
+}
+
+# Define todas as queries (consultas de leitura) disponíveis.
+type Query {
+  # A query 'orders' retorna uma lista de Ordens. O '!' indica que é não-nulo.
+  orders: [Order!]!
+}
+
+# Define todas as mutations (operações de escrita) disponíveis.
+type Mutation {
+  # A mutation 'createOrder' recebe um input e retorna a Ordem criada.
+  createOrder(input: CreateOrderInput!): Order!
+}

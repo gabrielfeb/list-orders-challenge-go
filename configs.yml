@@ -1,3 +1,5 @@
 db_driver: "postgres"
 db_url: "postgres://user:password@db:5432/ordersdb?sslmode=disable"
+rabbitmq_url: "amqp://guest:guest@rabbitmq:5672/"
 web_server_port: "8080"
+order_created_event: "OrdemCriada"

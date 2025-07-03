@@ -4,14 +4,16 @@ services:
     container_name: list-orders-app
     ports:
       - "8080:8080"
+    #volumes:
+      #- .:/app
     depends_on:
       db:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
     environment:
-      - DB_URL=postgres://user:password@db:5432/ordersdb?sslmode=disable
-      - WEB_SERVER_PORT=8080
+      - VIPER_DB_URL=postgres://user:password@db:5432/ordersdb?sslmode=disable
+      - VIPER_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
   db:
     image: postgres:14-alpine
@@ -32,8 +34,15 @@ services:
     image: migrate/migrate
     container_name: list-orders-migrate
     volumes:
-      - ./internal/infra/database/migration:/migrations
+      - ./internal/infrastructure/database/migration:/migrations
     command: ["-path", "/migrations", "-database", "postgres://user:password@db:5432/ordersdb?sslmode=disable", "up"]
     depends_on:
       db:
         condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: list-orders-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
