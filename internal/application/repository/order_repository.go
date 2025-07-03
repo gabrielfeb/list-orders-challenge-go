@@ -6,23 +6,31 @@ import (
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/domain/entity"
 )
 
-type OrderRepositoryDb struct{ Db *sql.DB }
+type OrderRepository struct {
+	Db *sql.DB
+}
 
-func NewOrderRepositoryDb(db *sql.DB) *OrderRepositoryDb { return &OrderRepositoryDb{Db: db} }
-func (r *OrderRepositoryDb) Save(order *entity.Order) error {
+func NewOrderRepository(db *sql.DB) *OrderRepository {
+	return &OrderRepository{Db: db}
+}
+
+func (r *OrderRepository) Create(order *entity.Order) error {
 	stmt, err := r.Db.Prepare("INSERT INTO orders (price, tax, final_price) VALUES ($1, $2, $3) RETURNING id")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
+	// O Scan agora é diretamente para o order.ID que é um int
 	return stmt.QueryRow(order.Price, order.Tax, order.FinalPrice).Scan(&order.ID)
 }
-func (r *OrderRepositoryDb) FindAll() ([]entity.Order, error) {
+
+func (r *OrderRepository) FindAll() ([]entity.Order, error) {
 	rows, err := r.Db.Query("SELECT id, price, tax, final_price FROM orders")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var orders []entity.Order
 	for rows.Next() {
 		var o entity.Order
