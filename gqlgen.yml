@@ -1,15 +1,10 @@
 schema:
-  - internal/infrastructure/graph/*.graphqls
-
+  - internal/infra/graph/*.graphqls
 exec:
-  filename: internal/infrastructure/graph/generated.go
-  package: graph
-
+  filename: internal/infra/graph/generated.go
 model:
-  filename: internal/infrastructure/graph/model/models_gen.go
-  package: model
-
+  filename: internal/infra/graph/model/model.go
 resolver:
   layout: follow-schema
-  dir: internal/infrastructure/graph
-  package: graph
+  dir: internal/infra/graph
+  filename: resolver.go
