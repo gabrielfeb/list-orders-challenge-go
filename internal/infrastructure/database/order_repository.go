@@ -1,4 +1,3 @@
-// Conteúdo completo do arquivo
 package database
 
 import (
@@ -21,17 +20,10 @@ func (r *OrderRepository) Create(order *entity.Order) error {
 		return err
 	}
 	defer stmt.Close()
-	// Usei float64 para o ID da entidade, mas o BD gera int. Fazendo a conversão.
-	var id int
-	err = stmt.QueryRow(order.Price, order.Tax, order.FinalPrice).Scan(&id)
-	if err != nil {
-		return err
-	}
-	order.ID = float64(id)
-	return nil
+	// O Scan agora é diretamente para o order.ID que é um int
+	return stmt.QueryRow(order.Price, order.Tax, order.FinalPrice).Scan(&order.ID)
 }
 
-// NOVO MÉTODO ADICIONADO AQUI
 func (r *OrderRepository) FindAll() ([]entity.Order, error) {
 	rows, err := r.Db.Query("SELECT id, price, tax, final_price FROM orders")
 	if err != nil {
@@ -42,11 +34,9 @@ func (r *OrderRepository) FindAll() ([]entity.Order, error) {
 	var orders []entity.Order
 	for rows.Next() {
 		var o entity.Order
-		var id int
-		if err := rows.Scan(&id, &o.Price, &o.Tax, &o.FinalPrice); err != nil {
+		if err := rows.Scan(&o.ID, &o.Price, &o.Tax, &o.FinalPrice); err != nil {
 			return nil, err
 		}
-		o.ID = float64(id)
 		orders = append(orders, o)
 	}
 	return orders, nil

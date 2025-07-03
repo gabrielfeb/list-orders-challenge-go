@@ -6,13 +6,16 @@ import (
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/domain/entity"
 )
 
-type CreateOrderUseCase struct{ OrderRepository repository.OrderRepository }
+type CreateOrderUseCase struct {
+	OrderRepository repository.OrderRepository
+}
 
 func NewCreateOrderUseCase(repo repository.OrderRepository) *CreateOrderUseCase {
 	return &CreateOrderUseCase{OrderRepository: repo}
 }
+
 func (uc *CreateOrderUseCase) Execute(input dto.OrderInputDTO) (*dto.OrderOutputDTO, error) {
-	order, err := entity.NewOrder(0, input.Price, input.Tax)
+	order, err := entity.NewOrder(input.Price, input.Tax)
 	if err != nil {
 		return nil, err
 	}
@@ -21,6 +24,9 @@ func (uc *CreateOrderUseCase) Execute(input dto.OrderInputDTO) (*dto.OrderOutput
 		return nil, err
 	}
 	return &dto.OrderOutputDTO{
-		ID: order.ID, Price: order.Price, Tax: order.Tax, FinalPrice: order.FinalPrice,
+		ID:         order.ID,
+		Price:      order.Price,
+		Tax:        order.Tax,
+		FinalPrice: order.FinalPrice,
 	}, nil
 }

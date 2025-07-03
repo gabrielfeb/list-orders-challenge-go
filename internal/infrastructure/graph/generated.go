@@ -21,7 +21,6 @@ import (
 
 // region    ************************** generated!.gotpl **************************
 
-// NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
 func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 	return &executableSchema{
 		schema:     cfg.Schema,
@@ -450,7 +449,7 @@ func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
+		ctx = rctx 
 		return ec.resolvers.Mutation().CreateOrder(rctx, fc.Args["input"].(model.CreateOrderInput))
 	})
 	if err != nil {
@@ -515,7 +514,7 @@ func (ec *executionContext) _Order_id(ctx context.Context, field graphql.Collect
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
+		ctx = rctx
 		return obj.ID, nil
 	})
 	if err != nil {
