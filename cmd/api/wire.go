@@ -15,13 +15,11 @@ import (
 	"github.com/google/wire"
 )
 
-// NOVA STRUCT "MÃE" PARA CONTER TODOS OS SERVIÇOS
 type Server struct {
 	OrderHandler    *handler.OrderHandler
 	GraphQLResolver *graph.Resolver
 }
 
-// NOVO PROVIDER PARA A STRUCT SERVER
 func NewServer(orderHandler *handler.OrderHandler, graphqlResolver *graph.Resolver) *Server {
 	return &Server{
 		OrderHandler:    orderHandler,
@@ -36,7 +34,6 @@ func NewGraphQLResolver(createUC *usecase.CreateOrderUseCase, listUC *usecase.Li
 	}
 }
 
-// O INJETOR AGORA CONSTRÓI E RETORNA A STRUCT SERVER
 func InitializeServer(db *sql.DB) (*Server, error) {
 	wire.Build(
 		database.NewOrderRepository,
@@ -45,7 +42,7 @@ func InitializeServer(db *sql.DB) (*Server, error) {
 		usecase.NewListOrdersUseCase,
 		handler.NewOrderHandler,
 		NewGraphQLResolver,
-		NewServer, // ADICIONADO
+		NewServer,
 	)
 	return &Server{}, nil
 }
