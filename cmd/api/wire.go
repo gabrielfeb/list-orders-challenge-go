@@ -1,62 +1,51 @@
 //go:build wireinject
 // +build wireinject
 
+//go:generate wire
 package main
 
 import (
 	"database/sql"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/configs"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/event"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/repository"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/application/usecase"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/database"
-	infra_event "github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/event"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/graph"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/web/handler"
-	"github.com/streadway/amqp"
-	"github.comcom/google/wire"
+	"github.com/google/wire"
 )
 
-// Este arquivo define as injeções de dependência para o Google Wire.
-// O Wire irá ler este arquivo e gerar o código de inicialização em 'wire_gen.go'.
-
-var setRepositoryDependency = wire.NewSet(
-	database.NewOrderRepository,
-	wire.Bind(new(repository.OrderRepository), new(*database.OrderRepository)),
-)
-
-var setEventDispatcherDependency = wire.NewSet(
-	infra_event.NewEventDispatcher,
-	wire.Bind(new(event.EventDispatcherInterface), new(*infra_event.EventDispatcher)),
-)
-
-func NewCreateOrderUseCase(db *sql.DB, eventDispatcher event.EventDispatcherInterface, event event.EventInterface) *usecase.CreateOrderUseCase {
-	return usecase.NewCreateOrderUseCase(database.NewOrderRepository(db), eventDispatcher, event)
+// NOVA STRUCT "MÃE" PARA CONTER TODOS OS SERVIÇOS
+type Server struct {
+	OrderHandler    *handler.OrderHandler
+	GraphQLResolver *graph.Resolver
 }
 
-func NewListOrderUseCase(db *sql.DB) *usecase.ListOrdersUseCase {
-	return usecase.NewListOrdersUseCase(database.NewOrderRepository(db))
+// NOVO PROVIDER PARA A STRUCT SERVER
+func NewServer(orderHandler *handler.OrderHandler, graphqlResolver *graph.Resolver) *Server {
+	return &Server{
+		OrderHandler:    orderHandler,
+		GraphQLResolver: graphqlResolver,
+	}
 }
 
-func NewWebOrderHandler(createUsecase *usecase.CreateOrderUseCase, listUsecase *usecase.ListOrdersUseCase) *handler.WebOrderHandler {
-	return handler.NewWebOrderHandler(createUsecase, listUsecase)
+func NewGraphQLResolver(createUC *usecase.CreateOrderUseCase, listUC *usecase.ListOrdersUseCase) *graph.Resolver {
+	return &graph.Resolver{
+		CreateOrderUseCase: createUC,
+		ListOrdersUseCase:  listUC,
+	}
 }
 
-// AllServices é uma struct para agrupar todos os serviços inicializados.
-type AllServices struct {
-	WebServerHandler *handler.WebOrderHandler
-}
-
-// InitializeAllServices é o injetor principal que o Wire usará para construir o grafo de dependências.
-func InitializeAllServices(cfg *configs.Config, db *sql.DB, rabbitMQConn *amqp.Connection) (*AllServices, error) {
+// O INJETOR AGORA CONSTRÓI E RETORNA A STRUCT SERVER
+func InitializeServer(db *sql.DB) (*Server, error) {
 	wire.Build(
-		setEventDispatcherDependency,
-		NewCreateOrderUseCase,
-		NewListOrderUseCase,
-		NewWebOrderHandler,
-		wire.Bind(new(event.EventInterface), new(*usecase.OrderCreatedEvent)),
-		wire.Value(&usecase.OrderCreatedEvent{Name: cfg.OrderCreatedEvent}),
-		wire.Struct(new(AllServices), "*"),
+		database.NewOrderRepository,
+		wire.Bind(new(repository.OrderRepository), new(*database.OrderRepository)),
+		usecase.NewCreateOrderUseCase,
+		usecase.NewListOrdersUseCase,
+		handler.NewOrderHandler,
+		NewGraphQLResolver,
+		NewServer, // ADICIONADO
 	)
-	return &AllServices{}, nil
+	return &Server{}, nil
 }

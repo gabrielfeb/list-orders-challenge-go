@@ -6,52 +6,53 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gabrielfeb/list-orders-challenge-go/configs"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infrastructure/graph"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
-	"github.com/streadway/amqp"
 )
 
-// main é a função de entrada da aplicação.
-// O fluxo de inicialização é:
-// 1. Carregar as configurações com o Viper.
-// 2. Estabelecer conexões com serviços externos (Banco de Dados, RabbitMQ).
-// 3. Utilizar o Google Wire (através de InitializeAllServices) para construir o grafo de dependências.
-// 4. Iniciar os servidores e listeners.
 func main() {
-	// 1. Carrega as configurações de 'configs.yml' e variáveis de ambiente.
 	cfg, err := configs.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Erro ao carregar configurações: %v", err)
+		log.Fatalf("Error loading config: %v", err)
 	}
-
-	// 2. Estabelece conexão com o Banco de Dados.
-	db, err := sql.Open(cfg.DBDriver, cfg.DBURL)
+	db, err := sql.Open("postgres", cfg.DBURL)
 	if err != nil {
-		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
+		log.Fatalf("Error connecting to db: %v", err)
 	}
 	defer db.Close()
 
-	// 2. Estabelece conexão com o RabbitMQ.
-	rabbitMQ, err := amqp.Dial(cfg.RabbitMQURL)
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, price DECIMAL(10, 2) NOT NULL, tax DECIMAL(10, 2) NOT NULL, final_price DECIMAL(10, 2) NOT NULL);")
 	if err != nil {
-		log.Fatalf("Erro ao conectar ao RabbitMQ: %v", err)
-	}
-	defer rabbitMQ.Close()
-
-	// 3. Inicializa todos os serviços e suas dependências usando o injetor gerado pelo Wire.
-	services, err := InitializeAllServices(cfg, db, rabbitMQ)
-	if err != nil {
-		log.Fatalf("Erro ao inicializar serviços com Wire: %v", err)
+		log.Fatalf("Error creating table: %v", err)
 	}
 
-	// 4. Configura o roteador web e inicia o servidor HTTP.
+	// Inicializa o servidor com o banco de dados
+	// e injeta as dependências necessárias
+	server, err := InitializeServer(db)
+	if err != nil {
+		log.Fatalf("failed to initialize server: %v", err)
+	}
+
+	// Servidor GraphQL usa o resolver de dentro do nosso server
+	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: server.GraphQLResolver}))
+
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-	router.Post("/order", services.WebServerHandler.CreateOrder)
-	router.Get("/orders", services.WebServerHandler.GetOrders)
 
-	fmt.Printf("Servidor Web rodando na porta %s\n", cfg.WebServerPort)
+	// Rotas REST usam o handler de dentro do nosso server
+	router.Post("/orders", server.OrderHandler.CreateOrder)
+	router.Get("/orders", server.OrderHandler.GetOrders)
+
+	// Rotas GraphQL
+	router.Handle("/", playground.Handler("GraphQL Playground", "/query"))
+	router.Handle("/query", srv)
+
+	fmt.Printf("Server is running on port %s\n", cfg.WebServerPort)
+	fmt.Printf("GraphQL Playground available at http://localhost:%s/\n", cfg.WebServerPort)
 	http.ListenAndServe(":"+cfg.WebServerPort, router)
 }
