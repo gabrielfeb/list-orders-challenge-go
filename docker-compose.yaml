@@ -4,8 +4,8 @@ services:
     container_name: list-orders-app
     ports:
       - "8080:8080"
-    volumes:
-      - .:/app
+    #volumes:
+      #- .:/app
     depends_on:
       db:
         condition: service_healthy

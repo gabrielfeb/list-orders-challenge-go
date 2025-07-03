@@ -3,27 +3,35 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copia arquivos de módulo.
+# Instala as ferramentas essenciais
+RUN apk add --no-cache git gcc libc-dev
+
+# Copia os arquivos de módulo e baixa as dependências
 COPY go.mod go.sum ./
-
-# 2. Sincroniza e baixa as dependências.
 RUN go mod tidy
+RUN go mod download
 
-# 3. Copia o resto do código fonte
+# Copia todo o código fonte
 COPY . .
 
-# 4. Gera o código do Wire
-RUN cd cmd/api && go generate
+# Gera o código do Wire
+RUN go generate ./cmd/api/...
 
-# 5. Compila a aplicação usando o caminho completo do módulo
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o main github.com/gabrielfeb/list-orders-challenge-go/cmd/api
+# Compila o projeto e coloca o executável na raiz do WORKDIR (/app)
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main ./cmd/api
 
-
-# Ambiente de execução leve
+# Estágio 2: Final
 FROM alpine:latest
 
 WORKDIR /app
+
+# Copia o executável do estágio de build para a imagem final
 COPY --from=builder /app/main .
+
+# Copia o arquivo de configuração
 COPY configs.yml .
+
 EXPOSE 8080
+
+# Define o comando para rodar a aplicação
 CMD ["./main"]

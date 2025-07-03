@@ -12,7 +12,7 @@ func NewCreateOrderUseCase(repo repository.OrderRepository) *CreateOrderUseCase 
 	return &CreateOrderUseCase{OrderRepository: repo}
 }
 func (uc *CreateOrderUseCase) Execute(input dto.OrderInputDTO) (*dto.OrderOutputDTO, error) {
-	order, err := entity.NewOrder(0, input.Price, input.Tax) // ID será gerado pelo DB
+	order, err := entity.NewOrder(0, input.Price, input.Tax)
 	if err != nil {
 		return nil, err
 	}
