@@ -1,0 +1,14 @@
+schema {
+    query: Query
+}
+
+type Order {
+    id: String!
+    price: Float!
+    tax: Float!
+    final_price: Float!
+}
+
+type Query {
+    listOrders: [Order!]!
+}

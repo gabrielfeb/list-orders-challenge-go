@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/entity"
+	"github.com/google/uuid"
 )
 
 type CreateOrderInputDTO struct {
@@ -10,10 +11,10 @@ type CreateOrderInputDTO struct {
 }
 
 type CreateOrderOutputDTO struct {
-	ID         string  `json:"id"`
-	Price      float64 `json:"price"`
-	Tax        float64 `json:"tax"`
-	FinalPrice float64 `json:"final_price"`
+	ID         string
+	Price      float64
+	Tax        float64
+	FinalPrice float64
 }
 
 type CreateOrderUseCase struct {
@@ -21,19 +22,25 @@ type CreateOrderUseCase struct {
 }
 
 func NewCreateOrderUseCase(orderRepository entity.OrderRepositoryInterface) *CreateOrderUseCase {
-	return &CreateOrderUseCase{OrderRepository: orderRepository}
+	return &CreateOrderUseCase{
+		OrderRepository: orderRepository,
+	}
 }
 
-func (uc *CreateOrderUseCase) Execute(input CreateOrderInputDTO) (*CreateOrderOutputDTO, error) {
-	order, err := entity.NewOrder(input.Price, input.Tax)
+func (c *CreateOrderUseCase) Execute(input CreateOrderInputDTO) (*CreateOrderOutputDTO, error) {
+	order, err := entity.NewOrder(uuid.New().String(), input.Price, input.Tax)
 	if err != nil {
 		return nil, err
 	}
-
-	err = uc.OrderRepository.Save(order)
-	if err != nil {
+	order.CalculateFinalPrice()
+	if err := c.OrderRepository.Save(order); err != nil {
 		return nil, err
 	}
 
 	return &CreateOrderOutputDTO{
-		ID:       
+		ID:         order.ID,
+		Price:      order.Price,
+		Tax:        order.Tax,
+		FinalPrice: order.FinalPrice,
+	}, nil
+}
