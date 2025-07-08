@@ -1,45 +1,97 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
+	"net"
+	"net/http"
+	"os"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/db"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/database"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/graphql"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/grpc"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/repository"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/web"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/web/handlers"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/grpc/pb"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/grpc/service"
+	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/web/webserver"
 	"github.com/gabrielfeb/list-orders-challenge-go/internal/usecase"
-	"github.com/go-chi/chi/middleware"
+	_ "github.com/go-sql-driver/mysql"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
-	// Database
-	postgres := db.NewPostgres()
-	orderRepo := repository.NewOrderRepositoryPostgres(postgres)
+	// --- Configuração do Banco de Dados ---
+	db, err := sql.Open(os.Getenv("DB_DRIVER"), fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	))
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer db.Close()
 
-	// Use Cases
-	createOrderUC := usecase.NewCreateOrderUseCase(orderRepo)
-	listOrdersUC := usecase.NewListOrdersUseCase(orderRepo)
+	// --- Inicialização do Repositório e Use Cases ---
+	orderRepository := database.NewOrderRepository(db)
+	createOrderUseCase := *usecase.NewCreateOrderUseCase(orderRepository)
+	listOrdersUseCase := *usecase.NewListOrdersUseCase(orderRepository)
 
-	// Web Server
-	webServer := web.NewWebServer(":8080")
-	webServer.Router.Use(middleware.Logger)
+	// --- Canais para sincronização e erros ---
+	errChan := make(chan error, 3) // Um para cada servidor
 
-	// Handlers
-	orderHandler := handlers.NewOrderHandler(createOrderUC, listOrdersUC)
-	webServer.AddHandler("/order", orderHandler.CreateOrder)
-	webServer.AddHandler("/orders", orderHandler.ListOrders)
+	// --- Iniciar Servidor Web (REST) ---
+	go startWebServer(os.Getenv("WEB_SERVER_PORT"), listOrdersUseCase, errChan)
 
-	// GraphQL
-	graphQLHandler := graphql.NewGraphQLHandler(listOrdersUC)
-	webServer.Router.Handle("/graphql", graphQLHandler)
+	// --- Iniciar Servidor gRPC ---
+	go startGRPCServer(os.Getenv("GRPC_SERVER_PORT"), createOrderUseCase, listOrdersUseCase, errChan)
 
-	// gRPC
-	go grpc.StartGRPCServer("50051", listOrdersUC)
+	// --- Iniciar Servidor GraphQL ---
+	go startGraphQLServer(os.Getenv("GRAPHQL_SERVER_PORT"), listOrdersUseCase, errChan)
 
-	log.Println("Server starting on port 8080")
-	if err := webServer.Start(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// --- Aguardar por erros ---
+	log.Printf("Application started. Waiting for connections...")
+	err = <-errChan
+	log.Fatalf("Error running server: %v", err)
+}
+
+func startWebServer(port string, listUC usecase.ListOrdersUseCase, errChan chan error) {
+	webserver := webserver.NewWebServer(":" + port)
+	webOrderHandler := webserver.NewWebOrderHandler(listUC)
+	webOrderHandler.RegisterRoutes(webserver)
+
+	log.Printf("REST server is running on port %s", port)
+	if err := http.ListenAndServe(":"+port, webserver); err != nil {
+		errChan <- fmt.Errorf("web server error: %w", err)
+	}
+}
+
+func startGRPCServer(port string, createUC usecase.CreateOrderUseCase, listUC usecase.ListOrdersUseCase, errChan chan error) {
+	orderService := service.NewOrderService(createUC, listUC)
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterOrderServiceServer(grpcServer, orderService)
+	reflection.Register(grpcServer) // Habilita reflection para clientes como grpcurl
+
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		errChan <- fmt.Errorf("grpc failed to listen: %w", err)
+		return
+	}
+
+	log.Printf("gRPC server is running on port %s", port)
+	if err := grpcServer.Serve(lis); err != nil {
+		errChan <- fmt.Errorf("grpc server error: %w", err)
+	}
+}
+
+func startGraphQLServer(port string, listUC usecase.ListOrdersUseCase, errChan chan error) {
+	resolver := graphql.NewResolver(listUC)
+	http.Handle("/query", resolver.ListOrdersHandler())
+
+	log.Printf("GraphQL server is running on port %s (endpoint /query)", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		errChan <- fmt.Errorf("graphql server error: %w", err)
 	}
 }
