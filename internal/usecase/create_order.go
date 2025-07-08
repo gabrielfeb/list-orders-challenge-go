@@ -1,7 +1,8 @@
 package usecase
 
 import (
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/entity"
+	"list-orders-challenge-go/internal/entity"
+
 	"github.com/google/uuid"
 )
 

@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/entity"
+	"list-orders-challenge-go/internal/entity"
 )
 
 type OrderRepository struct {
@@ -22,6 +22,7 @@ func (r *OrderRepository) Save(order *entity.Order) error {
 		return err
 	}
 	defer stmt.Close()
+
 	_, err = stmt.Exec(order.ID, order.Price, order.Tax, order.FinalPrice)
 	if err != nil {
 		return err
@@ -39,8 +40,7 @@ func (r *OrderRepository) List() ([]*entity.Order, error) {
 	var orders []*entity.Order
 	for rows.Next() {
 		var order entity.Order
-		err := rows.Scan(&order.ID, &order.Price, &order.Tax, &order.FinalPrice)
-		if err != nil {
+		if err := rows.Scan(&order.ID, &order.Price, &order.Tax, &order.FinalPrice); err != nil {
 			return nil, err
 		}
 		orders = append(orders, &order)

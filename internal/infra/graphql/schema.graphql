@@ -1,7 +1,3 @@
-schema {
-    query: Query
-}
-
 type Order {
     id: String!
     price: Float!
@@ -9,6 +5,20 @@ type Order {
     final_price: Float!
 }
 
+input OrderInput {
+    price: Float!
+    tax: Float!
+}
+
 type Query {
     listOrders: [Order!]!
+}
+
+type Mutation {
+    createOrder(input: OrderInput!): Order!
+}
+
+schema {
+    query: Query
+    mutation: Mutation
 }

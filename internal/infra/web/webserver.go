@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/usecase"
+	"list-orders-challenge-go/internal/usecase"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
