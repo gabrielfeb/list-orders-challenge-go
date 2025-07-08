@@ -1,19 +1,34 @@
-### Create an order
-POST http://localhost:8080/order
-Content-Type: application/json
-
-{
-  "price": "150.0",
-  "tax": "15.0"
-}
-
-### List all orders (REST)
-GET http://localhost:8080/order
-
-### List all orders (GraphQL)
+### 1. Criar um Pedido (usando a Mutation do GraphQL)
+# @prompt price
+# @prompt tax
 POST http://localhost:8082/query
 Content-Type: application/json
 
 {
-    "query": "query { listOrders { id price tax finalPrice } }"
+    "query": "mutation ($price: Float!, $tax: Float!) { createOrder(input: {price: $price, tax: $tax}) { id price tax final_price } }",
+    "variables": {
+        "price": 150.0,
+        "tax": 15.0
+    }
+}
+
+
+### Separador para múltiplas requisições
+###
+
+
+### 2. Listar todos os pedidos (usando REST)
+GET http://localhost:8080/order
+
+
+### Separador para múltiplas requisições
+###
+
+
+### 3. Listar todos os pedidos (usando a Query do GraphQL)
+POST http://localhost:8082/query
+Content-Type: application/json
+
+{
+    "query": "query { listOrders { id price tax final_price } }"
 }

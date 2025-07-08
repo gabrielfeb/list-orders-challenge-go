@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/http/handler"
+	"list-orders-challenge-go/internal/infra/web/handler"
 )
 
 func NewRouter(orderHandler *handler.OrderHandler) http.Handler {

@@ -4,19 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/usecase/list_orders"
+	"list-orders-challenge-go/internal/usecase"
 )
 
 type OrderHandler struct {
-	ListOrdersUseCase list_orders.ListOrdersUseCase
+	ListOrdersUseCase usecase.ListOrdersUseCase
 }
 
-func NewOrderHandler(listOrdersUseCase list_orders.ListOrdersUseCase) *OrderHandler {
+func NewOrderHandler(listOrdersUseCase usecase.ListOrdersUseCase) *OrderHandler {
 	return &OrderHandler{
 		ListOrdersUseCase: listOrdersUseCase,
 	}
 }
-
 func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.ListOrdersUseCase.Execute()
 	if err != nil {

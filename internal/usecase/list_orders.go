@@ -1,6 +1,6 @@
 package usecase
 
-import "github.com/gabrielfeb/list-orders-challenge-go/internal/entity"
+import "list-orders-challenge-go/internal/entity"
 
 type ListOrdersOutputDTO struct {
 	ID         string

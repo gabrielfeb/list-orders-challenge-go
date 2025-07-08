@@ -8,15 +8,16 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/database"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/graphql"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/grpc/pb"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/grpc/service"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/infra/web/webserver"
-	"github.com/gabrielfeb/list-orders-challenge-go/internal/usecase"
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"list-orders-challenge-go/internal/infra/database"
+	"list-orders-challenge-go/internal/infra/graphql"
+	service "list-orders-challenge-go/internal/infra/grpc"
+	"list-orders-challenge-go/internal/infra/grpc/pb"
+	webserver "list-orders-challenge-go/internal/infra/web"
+	"list-orders-challenge-go/internal/usecase"
 )
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 	listOrdersUseCase := *usecase.NewListOrdersUseCase(orderRepository)
 
 	// --- Canais para sincronização e erros ---
-	errChan := make(chan error, 3) // Um para cada servidor
+	errChan := make(chan error, 3)
 
 	// --- Iniciar Servidor Web (REST) ---
 	go startWebServer(os.Getenv("WEB_SERVER_PORT"), listOrdersUseCase, errChan)
@@ -48,21 +49,20 @@ func main() {
 	go startGRPCServer(os.Getenv("GRPC_SERVER_PORT"), createOrderUseCase, listOrdersUseCase, errChan)
 
 	// --- Iniciar Servidor GraphQL ---
-	go startGraphQLServer(os.Getenv("GRAPHQL_SERVER_PORT"), listOrdersUseCase, errChan)
+	go startGraphQLServer(os.Getenv("GRAPHQL_SERVER_PORT"), createOrderUseCase, listOrdersUseCase, errChan)
 
-	// --- Aguardar por erros ---
 	log.Printf("Application started. Waiting for connections...")
 	err = <-errChan
 	log.Fatalf("Error running server: %v", err)
 }
 
 func startWebServer(port string, listUC usecase.ListOrdersUseCase, errChan chan error) {
-	webserver := webserver.NewWebServer(":" + port)
+	router := webserver.NewWebServer(":" + port)
 	webOrderHandler := webserver.NewWebOrderHandler(listUC)
-	webOrderHandler.RegisterRoutes(webserver)
+	webOrderHandler.RegisterRoutes(router)
 
 	log.Printf("REST server is running on port %s", port)
-	if err := http.ListenAndServe(":"+port, webserver); err != nil {
+	if err := http.ListenAndServe(":"+port, router); err != nil {
 		errChan <- fmt.Errorf("web server error: %w", err)
 	}
 }
@@ -72,7 +72,7 @@ func startGRPCServer(port string, createUC usecase.CreateOrderUseCase, listUC us
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterOrderServiceServer(grpcServer, orderService)
-	reflection.Register(grpcServer) // Habilita reflection para clientes como grpcurl
+	reflection.Register(grpcServer)
 
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -86,9 +86,11 @@ func startGRPCServer(port string, createUC usecase.CreateOrderUseCase, listUC us
 	}
 }
 
-func startGraphQLServer(port string, listUC usecase.ListOrdersUseCase, errChan chan error) {
-	resolver := graphql.NewResolver(listUC)
-	http.Handle("/query", resolver.ListOrdersHandler())
+func startGraphQLServer(port string, createUC usecase.CreateOrderUseCase, listUC usecase.ListOrdersUseCase, errChan chan error) {
+
+	resolver := graphql.NewResolver(createUC, listUC)
+
+	http.Handle("/query", resolver.Handler())
 
 	log.Printf("GraphQL server is running on port %s (endpoint /query)", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

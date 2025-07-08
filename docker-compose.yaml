@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build: .
@@ -8,8 +6,6 @@ services:
       - "8080:8080"   # REST API
       - "50051:50051" # gRPC
       - "8082:8082"   # GraphQL
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy
